@@ -38,9 +38,16 @@ class TestHdlc(unittest.TestCase):
         self.assertEqual(r.statistics['invalid'], 1)
 
     def test_escaped(self):
-        r = _make_receiver('\x7eabc\x7d\x5edef\x7e')
+        r = _make_receiver('\x7eabc\x7d\x5edef\x3f\xd4\x66\x53\x7e')
         self.assertEqual(r.get(), 'abc\x7edef')
-        self.assertEqual(r.statistics['bytes'], 10)
+        self.assertEqual(r.statistics['bytes'], 14)
+        self.assertEqual(r.statistics['fcs'], 0)
+
+    def test_invalid_crc(self):
+        r = _make_receiver('\x7eabc\x7d\x5edef\x3f\xd4\x66\x55\x7e')
+        self.assertEqual(r.get(), None)
+        self.assertEqual(r.statistics['bytes'], 14)
+        self.assertEqual(r.statistics['fcs'], 1)
 
 
 class TestFcs32(unittest.TestCase):

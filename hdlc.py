@@ -121,6 +121,7 @@ def create_statistics():
         'double_escape': 0,
         'timeout': 0,
         'invalid': 0,
+        'fcs': 0,
     }
 
 
@@ -192,8 +193,10 @@ class Receiver(object):
             if len(self.frame) == 0:
                 self.statistics['empty'] = 1
             else:
-                if self.verify_frame():
-                    self.completed_frames.append(self.frame)
+                frame = ''.join(self.frame)
+                if self.verify_frame(frame):
+                    # Drop the FCS off of the queued frame.
+                    self.completed_frames.append(frame[:-4])
             self.set_state(GET_FRAME)
         elif c == HDLC_ESC:
             self.set_state(GET_ESC)
@@ -219,11 +222,17 @@ class Receiver(object):
     def process_state(self, c):
         self.state_handler[self.state](c)
 
-    def verify_frame(self):
-        if len(self.frame) < 4:
+    def verify_frame(self, frame):
+        if len(frame) < 4:
             self.statistics['invalid'] += 1
             self.frame_error = True
             return False
+
+        fcs = compute_fcs32(frame)
+        if fcs != FCS32_GOOD_FINAL:
+            self.statistics['fcs'] += 1
+            return False
+
         return True
 
     def get(self):
@@ -241,6 +250,6 @@ class Receiver(object):
             self.process_state(c)
 
             if self.completed_frames:
-                return ''.join(self.completed_frames.popleft())
+                return self.completed_frames.popleft()
             if self.frame_error:
                 return None
