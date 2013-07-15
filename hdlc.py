@@ -155,7 +155,6 @@ class Receiver(object):
         self.statistics = create_statistics()
         self.frame = []
         self.completed_frames = deque()
-        self.frame_error = False
         self.state_handler = {
             OUT_OF_SYNC: self.process_out_of_sync,
             IDLE: self.process_idle,
@@ -171,8 +170,7 @@ class Receiver(object):
 
         if next_state == GET_FRAME:
             if current_state != GET_ESC:
-                self.frame = []
-                self.frame_error = False
+                del self.frame[:]
 
         self.state = next_state
 
@@ -197,9 +195,15 @@ class Receiver(object):
                 if self.verify_frame(frame):
                     # Drop the FCS off of the queued frame.
                     self.completed_frames.append(frame[:-4])
+                else:
+                    # Bad frame.  Tack in a None object to indicate this.
+                    self.completed_frames.append(None)
+
             self.set_state(GET_FRAME)
+
         elif c == HDLC_ESC:
             self.set_state(GET_ESC)
+
         else:
             self.frame.append(c)
 
@@ -213,6 +217,7 @@ class Receiver(object):
             self.statistics['double_escape'] += 1
             self.statistics['invalid'] += 1
             self.set_state(OUT_OF_SYNC)
+
         else:
             value = ord(c)
             decoded = value ^ HDLC_ESC_MOD
@@ -225,7 +230,6 @@ class Receiver(object):
     def verify_frame(self, frame):
         if len(frame) < 4:
             self.statistics['invalid'] += 1
-            self.frame_error = True
             return False
 
         fcs = compute_fcs32(frame)
@@ -236,8 +240,6 @@ class Receiver(object):
         return True
 
     def get(self):
-        self.frame_complete = False
-        self.frame_error = False
         while True:
             c = self._read()
 
@@ -251,5 +253,3 @@ class Receiver(object):
 
             if self.completed_frames:
                 return self.completed_frames.popleft()
-            if self.frame_error:
-                return None
