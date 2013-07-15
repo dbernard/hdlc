@@ -41,3 +41,16 @@ class TestHdlc(unittest.TestCase):
         r = _make_receiver('\x7eabc\x7d\x5edef\x7e')
         self.assertEqual(r.get(), 'abc\x7edef')
         self.assertEqual(r.statistics['bytes'], 10)
+
+
+class TestFcs32(unittest.TestCase):
+    def test_crc_data(self):
+        data = "Hello World"
+        fcs = hdlc.compute_fcs32(data)
+        self.assertEqual(0xB5E84EA9, fcs)
+
+        # Note: the complement of the FCS is appended to the data, LSB first.
+        # ~0xB5E84EA9 = 0x4A17B156
+        data = "Hello World\x56\xB1\x17\x4A"
+        fcs = hdlc.compute_fcs32(data)
+        self.assertEqual(hdlc.FCS32_GOOD_FINAL, fcs)
