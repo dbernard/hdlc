@@ -1,7 +1,21 @@
-IDLE = 0
-START_FRAME = 1
-GET_FRAME = 2
-GET_ESC = 3
+class State(object):
+    def __init__(self, name):
+        self._name = name
+
+    def __str__(self):
+        return self._name
+
+    def __repr__(self):
+        return '<State {0}>'.format(self._name)
+
+    def __hash__(self):
+        return hash(repr(self))
+
+
+IDLE = State("Idle")
+START_FRAME = State("Start Frame")
+GET_FRAME = State("Get Frame")
+GET_ESC = State("Get Esc")
 
 HDLC_IDLE = '\xFF'
 HDLC_FLAG = '\x7E'
