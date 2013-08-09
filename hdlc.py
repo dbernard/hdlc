@@ -178,6 +178,9 @@ class Receiver(object):
         if c == HDLC_FLAG:
             self.state = GET_FRAME
 
+    def _write(self):
+        self.device.write()
+
     def process_idle(self, c):
         if c == HDLC_IDLE:
             self.state = IDLE
@@ -253,3 +256,15 @@ class Receiver(object):
 
             if self.completed_frames:
                 return self.completed_frames.popleft()
+
+    def send(self, data):
+        # Do 'stuff' to data to structure it
+        # i.e. [flag][addr][control][data][fcs][flag]
+        if HDLC_ESC in data:
+            # XOR the esc piece of the data with HDLC_ESC_MOD
+            pass
+        frame = HDLC_FLAG + 0 + data + 'imthefcs' + HDLC_FLAG
+        # NOTE: The above lines are not intended to be the data actually sent.
+        # This is just the idea behind it. This code is unfinished.
+        self._write(frame)
+
