@@ -1,7 +1,7 @@
 import serial
 import hdlc
 
-class Serial(object):
+class VirtualSerial(object):
     '''
     A virtual serial connection handler for communication wit the hdlc
     '''

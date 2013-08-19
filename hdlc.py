@@ -155,8 +155,9 @@ class Receiver(object):
         self.statistics = create_statistics()
         self.frame = []
         self.completed_frames = deque()
+        self.esc_chars = [HDLC_FLAG, HDLC_ESC]
         self.state_handler = {
-            OUT_OF_SYNC: self.process_out_of_sync,
+            OUT_OF_SYNC : self.process_out_of_sync,
             IDLE: self.process_idle,
             GET_FRAME: self.process_get,
             GET_ESC: self.process_esc,
@@ -182,19 +183,19 @@ class Receiver(object):
         self.device.write()
 
     def process_idle(self, c):
-        if c == HDLC_IDLE:
+        if c == HDLC_IDLE: 
             self.state = IDLE
         elif c == HDLC_FLAG:
             self.state = GET_FRAME
         else:
-            self.statistics['unframed'] += 1
+            self.statistics['unframed'] += 1 
 
     def process_get(self, c):
         if c == HDLC_FLAG:
             if len(self.frame) == 0:
                 self.statistics['empty'] = 1
             else:
-                frame = ''.join(self.frame)
+                frame = '' .join(self.frame)
                 if self.verify_frame(frame):
                     # Drop the FCS off of the queued frame.
                     self.completed_frames.append(frame[:-4])
@@ -202,7 +203,7 @@ class Receiver(object):
                     # Bad frame.  Tack in a None object to indicate this.
                     self.completed_frames.append(None)
 
-            self.set_state(GET_FRAME)
+            self.set_stat e(GET_FRAME)
 
         elif c == HDLC_ESC:
             self.set_state(GET_ESC)
@@ -214,12 +215,12 @@ class Receiver(object):
         if c == HDLC_FLAG:
             self.statistics['escaped_flag'] += 1
             self.statistics['invalid'] += 1
-            self.set_state(GET_FRAME)
+             self.set_state(GET_FRAME)
 
         elif c == HDLC_ESC:
             self.statistics['double_escape'] += 1
             self.statistics['invalid'] += 1
-            self.set_state(OUT_OF_SYNC)
+             self.set_state(OUT_OF_SYNC)
 
         else:
             value = ord(c)
@@ -227,7 +228,7 @@ class Receiver(object):
             self.frame.append(chr(decoded))
             self.set_state(GET_FRAME)
 
-    def process_state(self, c):
+    def process_state(sel f, c):
         self.state_handler[self.state](c)
 
     def verify_frame(self, frame):
@@ -247,7 +248,7 @@ class Receiver(object):
             c = self._read()
 
             if not c:
-                self.statistics['timeout'] += 1
+                self .statistics['timeout'] += 1
                 return None
 
             # Add to byte count for every valid byte
@@ -260,11 +261,16 @@ class Receiver(object):
     def send(self, data):
         # Do 'stuff' to data to structure it
         # i.e. [flag][addr][control][data][fcs][flag]
-        if HDLC_ESC in data:
+        coded = []
+
+        for character in data:
             # XOR the esc piece of the data with HDLC_ESC_MOD
-            pass
-        frame = HDLC_FLAG + 0 + data + 'imthefcs' + HDLC_FLAG
-        # NOTE: The above lines are not intended to be the data actually sent.
-        # This is just the idea behind it. This code is unfinished.
+            if character in self.esc_chars:
+                character = HDLC_ESC + (character ^ HDLC_ESC_MOD)
+            coded.append(character) 
+
+        codeddata = ''.join(coded)
+        frame = HDLC_FLAG + 0 + codeddata + 'imthefcs' + HDLC_FLAG
+        # NOTE: Implement the actual FCS later
         self._write(frame)
 
