@@ -1,21 +1,38 @@
 import serial
 import hdlc
+import threading
 
 class VirtualSerial(object):
     '''
     A virtual serial connection handler for communication wit the hdlc
     '''
-    def __init__(self, address):
-        self.conn = hdlc.Receiver(serial.Serial(port=address))
+    def __init__(self, serPort, numChannels):
+        self.hdlc = hdlc.Receiver(port=serPort)
+        self.chan_buffers = []
+        for i in range(numChannels):
+            # Look into queues insteat of lists
+            self.chan_buffers.append([])
+        self._startRxThread()
 
-    def read(self):
-        data = self.conn.get()
+    def chanRead(self, chanNo, length):
+        # Read from chan_buffer for (length)
+        pass
 
-        if data is None:
-            pass #Error? Warning? Nothing?
+    def chanWrite(self, chanNo, data):
+        # Adjust send to match this format
+        self.hdlc.send(chanNo, 0, data) #channel num, command, data
 
-        return data
+    def _checkForData(self):
+        while True:
+            # Do something about empty data - Dont fill buffer with empty data
+            msg = hdlc.get()
+            # (channel num)(cmd num)(data)
+            chanNo = ord(msg[0])
+            self.chan_buffers[chanNo].append(msg[2:])
 
-    def write(self, data):
-        self.conn.send(data)
+    def _startRxThread(self):
+        t = threading.Thread(target = self._checkForData())
+        t.setDaemon(True)
+        t.start()
+        return t
 
