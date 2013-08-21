@@ -203,7 +203,7 @@ class Receiver(object):
                     # Bad frame.  Tack in a None object to indicate this.
                     self.completed_frames.append(None)
 
-            self.set_stat e(GET_FRAME)
+            self.set_state(GET_FRAME)
 
         elif c == HDLC_ESC:
             self.set_state(GET_ESC)
@@ -215,12 +215,12 @@ class Receiver(object):
         if c == HDLC_FLAG:
             self.statistics['escaped_flag'] += 1
             self.statistics['invalid'] += 1
-             self.set_state(GET_FRAME)
+            self.set_state(GET_FRAME)
 
         elif c == HDLC_ESC:
             self.statistics['double_escape'] += 1
             self.statistics['invalid'] += 1
-             self.set_state(OUT_OF_SYNC)
+            self.set_state(OUT_OF_SYNC)
 
         else:
             value = ord(c)
@@ -228,7 +228,7 @@ class Receiver(object):
             self.frame.append(chr(decoded))
             self.set_state(GET_FRAME)
 
-    def process_state(sel f, c):
+    def process_state(self, c):
         self.state_handler[self.state](c)
 
     def verify_frame(self, frame):
