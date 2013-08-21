@@ -258,19 +258,19 @@ class Receiver(object):
             if self.completed_frames:
                 return self.completed_frames.popleft()
 
-    def send(self, data):
+    def send(self, channel, cmd, data):
         # Do 'stuff' to data to structure it
-        # i.e. [flag][addr][control][data][fcs][flag]
+        # i.e. [flag][channel][cmd][data][fcs][flag]
         coded = []
 
         for character in data:
-            # XOR the esc piece of the data with HDLC_ESC_MOD
+            # XOR any esc pieces of the data with HDLC_ESC_MOD
             if character in self.esc_chars:
                 character = HDLC_ESC + (character ^ HDLC_ESC_MOD)
             coded.append(character) 
 
         codeddata = ''.join(coded)
-        frame = HDLC_FLAG + 0 + codeddata + 'imthefcs' + HDLC_FLAG
+        frame = HDLC_FLAG + channel + cmd + codeddata + 'imthefcs' + HDLC_FLAG
         # NOTE: Implement the actual FCS later
         self._write(frame)
 
