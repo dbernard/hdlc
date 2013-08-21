@@ -18,7 +18,7 @@ class VirtualSerial(object):
             self.chan_buffers.append(Queue.Queue())
         self._startRxThread()
 
-    def chanRead(self, chanNo, length=1, timeout=None):
+    def chan_read(self, chanNo, length=1, timeout=None):
         '''
         Read from chan_buffer for (length)
         '''
@@ -30,14 +30,14 @@ class VirtualSerial(object):
 
         return data
 
-    def chanWrite(self, chanNo, data):
+    def chan_write(self, chanNo, data):
         '''
         Write to a channel on the hdlc
         '''
         self.hdlc.send(chanNo, 0, data)
         #channel num, cmd (0 for now), data
 
-    def _checkForData(self):
+    def _check_for_data(self):
         '''
         Continuously check for incoming data - break it up and add it to the
         queue.
@@ -51,8 +51,8 @@ class VirtualSerial(object):
                 for bit in data:
                     self.chan_buffers[chanNo].put_nowait(bit)
 
-    def _startRxThread(self):
-        t = threading.Thread(target = self._checkForData())
+    def _start_thread(self):
+        t = threading.Thread(target = self._check_for_data())
         t.setDaemon(True)
         t.start()
         return t
