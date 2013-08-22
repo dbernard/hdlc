@@ -12,7 +12,8 @@ class VirtualSerial(object):
         Start a virtual serial connection with (numChannels) channels 
         to an HDLC receiver at (serPort).
         '''
-        self.hdlc = hdlc.Receiver(port=serPort)
+        device = serial.Serial(port=serPort)
+        self.hdlc = hdlc.Receiver(device))
         self.chan_buffers = []
         for i in range(numChannels):
             self.chan_buffers.append(Queue.Queue())
