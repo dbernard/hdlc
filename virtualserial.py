@@ -7,17 +7,16 @@ class VirtualSerial(object):
     '''
     A virtual serial connection handler for communication with the hdlc
     '''
-    def __init__(self, serPort, numChannels):
+    def __init__(self, device, numChannels):
         '''
         Start a virtual serial connection with (numChannels) channels 
-        to an HDLC receiver at (serPort).
+        to an HDLC receiver taking to  (device).
         '''
-        device = serial.Serial(port=serPort)
         self.hdlc = hdlc.Receiver(device))
         self.chan_buffers = []
         for i in range(numChannels):
             self.chan_buffers.append(Queue.Queue())
-        self._startRxThread()
+        self._startThread()
 
     def chan_read(self, chanNo, length=1, timeout=None):
         '''
