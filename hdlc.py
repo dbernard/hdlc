@@ -179,8 +179,8 @@ class Receiver(object):
         if c == HDLC_FLAG:
             self.state = GET_FRAME
 
-    def _write(self):
-        self.device.write()
+    def _write(self, data):
+        self.device.write(data)
 
     def process_idle(self, c):
         if c == HDLC_IDLE: 
