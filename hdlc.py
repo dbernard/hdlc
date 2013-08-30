@@ -86,6 +86,15 @@ def compute_fcs32(data, fcs=None):
     return fcs
 
 
+def append_fcs32(data):
+    # Note: the complement of the FCS is appended to the data, LSB first.
+    # ~0xB5E84EA9 = 0x4A17B156
+    fcs = compute_fcs32(data) ^ 0xFFFFFFFF
+    for i in xrange(4):
+        data += chr(fcs & 0xFF)
+        fcs >>= 8
+    return data
+
 
 class State(object):
     def __init__(self, name):
@@ -248,7 +257,7 @@ class Receiver(object):
             c = self._read()
 
             if not c:
-                self .statistics['timeout'] += 1
+                self.statistics['timeout'] += 1
                 return None
 
             # Add to byte count for every valid byte
@@ -259,18 +268,18 @@ class Receiver(object):
                 return self.completed_frames.popleft()
 
     def send(self, channel, cmd, data):
-        # Do 'stuff' to data to structure it
-        # i.e. [flag][channel][cmd][data][fcs][flag]
-        coded = []
+        data = append_fcs32(str(channel) + str(cmd) + data)
 
+        coded = []
         for character in data:
             # XOR any esc pieces of the data with HDLC_ESC_MOD
             if character in self.esc_chars:
                 character = HDLC_ESC + (character ^ HDLC_ESC_MOD)
             coded.append(character) 
 
-        codeddata = ''.join(coded)
-        frame = HDLC_FLAG + channel + cmd + codeddata + 'imthefcs' + HDLC_FLAG
-        # NOTE: Implement the actual FCS later
+        coded = ''.join(coded)
+
+        frame = HDLC_FLAG + coded + HDLC_FLAG
+
         self._write(frame)
 
