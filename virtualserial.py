@@ -3,34 +3,72 @@ import Queue
 import hdlc
 import threading
 
+class Channel(object):
+    '''
+    An object representing a virtual serial channel
+    '''
+    def __init__(self, vsObj, num, name=None):
+        self.vs = vsObj
+        self.num = num
+        self.name = name
+        self.vs.add_channel(num)
+
+    def read(self, length=1, timeout=None):
+        '''
+        Read from the channel
+        '''
+        return self.vs.channel_read(self.num, length=length, 
+                timeout=timeout)
+
+    def write(self, data):
+        '''
+        Write to the channel
+        '''
+        self.vs.channel_write(self.num, data)
+
+def open(vsObj, num, name=None):
+    '''
+    Open and return a Channel object
+    '''
+    return Channel(vsObj, num, name=name)
+
+
 class VirtualSerial(object):
     '''
     A virtual serial connection handler for communication with the hdlc
     '''
-    def __init__(self, device, numChannels):
+    def __init__(self, device):
         '''
         Start a virtual serial connection with (numChannels) channels 
         to an HDLC receiver taking to  (device).
         '''
-        self.hdlc = hdlc.Receiver(device))
-        self.chan_buffers = []
-        for i in range(numChannels):
-            self.chan_buffers.append(Queue.Queue())
-        self._startThread()
+        self.hdlc = hdlc.Receiver(device)
+        self.chan_buffers = {}
+        self._start_thread()
 
-    def chan_read(self, chanNo, length=1, timeout=None):
+    def add_channel(self, num):
+        '''
+        Add a channel to the channel buffer dict (num is the reference key)
+        '''
+        self.chan_buffers[num] = Queue.Queue()
+
+    def channel_read(self, chanNo, length=1, timeout=None):
         '''
         Read from chan_buffer for (length)
         '''
         buffdata = []
-        for i in range(length):
-            buffdata.append(self.chan_buffers[chanNo].get(block=True,
-                timeout=timeout))
+        try:
+            for i in range(length):
+                buffdata.append(self.chan_buffers[chanNo].get(block=True,
+                    timeout=timeout))
+        except Queue.Empty:
+            buffdata.append('')
+
         data = ''.join(buffdata)
 
         return data
 
-    def chan_write(self, chanNo, data):
+    def channel_write(self, chanNo, data):
         '''
         Write to a channel on the hdlc
         '''
@@ -43,16 +81,15 @@ class VirtualSerial(object):
         queue.
         '''
         while True:
-            msg = hdlc.get()
+            msg = self.hdlc.get()
             if msg:
                 # (channel num)(cmd num)(data)
-                chanNo = ord(msg[0])
+                chanNo = int(msg[0])
                 data = msg[2:]
-                for bit in data:
-                    self.chan_buffers[chanNo].put_nowait(bit)
+                self.chan_buffers[chanNo].put_nowait(data)
 
     def _start_thread(self):
-        t = threading.Thread(target = self._check_for_data())
+        t = threading.Thread(target = self._check_for_data)
         t.setDaemon(True)
         t.start()
         return t
