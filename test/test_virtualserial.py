@@ -22,20 +22,20 @@ class TestVirtualSerial(unittest.TestCase):
     def test_emptyBufferRead(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
         vs.add_channel(num=0)
-        self.assertEqual(vs.channel_read(0, timeout=1), '')
+        self.assertEqual(vs.channel_read(0, 1, timeout=1), '')
 
     def test_singleEntryBufferRead(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
         vs.add_channel(num=0)
         vs.channel_write(0, 'hello')
-        self.assertEqual(vs.channel_read(0), 'hello')
+        self.assertEqual(vs.channel_read(0, 1), 'hello')
 
     def test_multiEntryBufferRead(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
         vs.add_channel(num=0)
         vs.channel_write(0, 'foo')
         vs.channel_write(0, 'bar')
-        self.assertEqual(vs.channel_read(0, length=2), 'foobar')
+        self.assertEqual(vs.channel_read(0, 2), 'foobar')
 
     def test_multiChannelBufferRead(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
@@ -43,8 +43,8 @@ class TestVirtualSerial(unittest.TestCase):
         vs.add_channel(num=1)
         vs.channel_write(0, 'foo')
         vs.channel_write(1, 'bar')
-        self.assertEqual(vs.channel_read(0), 'foo')
-        self.assertEqual(vs.channel_read(1), 'bar')
+        self.assertEqual(vs.channel_read(0, 1), 'foo')
+        self.assertEqual(vs.channel_read(1, 1), 'bar')
 
     def test_addChannel(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
@@ -64,11 +64,14 @@ class testChannel(unittest.TestCase):
         vs = virtualserial.VirtualSerial(FakeDevice())
         ch = virtualserial.Channel(vs, num=0)
         ch.write('foo')
-        self.assertEqual(ch.read(), 'foo')
+        self.assertEqual(ch.read(1), 'foo')
 
     def test_open(self):
         vs = virtualserial.VirtualSerial(FakeDevice())
-        ch = virtualserial.open(vs, num=0, name='test')
+        ch = vs.open(num=0, name='test')
+        ch.write('foo')
         self.assertEqual(ch.num, 0)
         self.assertEqual(ch.name, 'test')
+        self.assertEqual(ch.read(1), 'foo')
+
 

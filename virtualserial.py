@@ -13,24 +13,17 @@ class Channel(object):
         self.name = name
         self.vs.add_channel(num)
 
-    def read(self, length=1, timeout=None):
+    def read(self, length, timeout=None):
         '''
         Read from the channel
         '''
-        return self.vs.channel_read(self.num, length=length, 
-                timeout=timeout)
+        return self.vs.channel_read(self.num, length, timeout=timeout)
 
     def write(self, data):
         '''
         Write to the channel
         '''
         self.vs.channel_write(self.num, data)
-
-def open(vsObj, num, name=None):
-    '''
-    Open and return a Channel object
-    '''
-    return Channel(vsObj, num, name=name)
 
 
 class VirtualSerial(object):
@@ -46,13 +39,19 @@ class VirtualSerial(object):
         self.chan_buffers = {}
         self._start_thread()
 
+    def open(self, num, name=None):
+        '''
+        Open and return a Channel object
+        '''
+        return Channel(self, num, name=name)
+
     def add_channel(self, num):
         '''
         Add a channel to the channel buffer dict (num is the reference key)
         '''
         self.chan_buffers[num] = Queue.Queue()
 
-    def channel_read(self, chanNo, length=1, timeout=None):
+    def channel_read(self, chanNo, length, timeout=None):
         '''
         Read from chan_buffer for (length)
         '''
