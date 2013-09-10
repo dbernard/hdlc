@@ -26,6 +26,17 @@ class Channel(object):
         self.vs.channel_write(self.num, data)
 
 
+class ChannelError(Exception):
+    '''
+    Custom exception for channel related errors.
+    '''
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return 'ChannelError: %s' % self.msg
+
+
 class VirtualSerial(object):
     '''
     A virtual serial connection handler for communication with the hdlc
@@ -36,7 +47,7 @@ class VirtualSerial(object):
         to an HDLC receiver taking to  (device).
         '''
         self.hdlc = hdlc.Receiver(device)
-        self.chan_buffers = {}
+        self.channel_queues = {}
         self._start_thread()
 
     def open(self, num, name=None):
@@ -49,7 +60,7 @@ class VirtualSerial(object):
         '''
         Add a channel to the channel buffer dict (num is the reference key)
         '''
-        self.chan_buffers[num] = Queue.Queue()
+        self.channel_queues[num] = Queue.Queue()
 
     def channel_read(self, chanNo, length, timeout=None):
         '''
@@ -58,10 +69,12 @@ class VirtualSerial(object):
         buffdata = []
         try:
             for i in range(length):
-                buffdata.append(self.chan_buffers[chanNo].get(block=True,
+                buffdata.append(self.channel_queues[chanNo].get(block=True,
                     timeout=timeout))
         except Queue.Empty:
             buffdata.append('')
+        except KeyError:
+            raise ChannelError('Could not find channel %s.' % chanNo)
 
         data = ''.join(buffdata)
 
@@ -83,9 +96,9 @@ class VirtualSerial(object):
             msg = self.hdlc.get()
             if msg:
                 # (channel num)(cmd num)(data)
-                chanNo = int(msg[0])
+                chanNo = ord(msg[0])
                 data = msg[2:]
-                self.chan_buffers[chanNo].put_nowait(data)
+                self.channel_queues[chanNo].put_nowait(data)
 
     def _start_thread(self):
         t = threading.Thread(target = self._check_for_data)
