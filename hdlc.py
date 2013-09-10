@@ -268,7 +268,7 @@ class Receiver(object):
                 return self.completed_frames.popleft()
 
     def send(self, channel, cmd, data):
-        data = append_fcs32(str(channel) + str(cmd) + data)
+        data = append_fcs32(chr(channel) + chr(cmd) + data)
 
         coded = []
         for character in data:
