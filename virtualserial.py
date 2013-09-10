@@ -85,7 +85,7 @@ class VirtualSerial(object):
         Write to a channel on the hdlc
         '''
         self.hdlc.send(chanNo, 0, data)
-        #channel num, cmd (0 for now), data
+        #channel num, control (0 for now), data
 
     def _check_for_data(self):
         '''
