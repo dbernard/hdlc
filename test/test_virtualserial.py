@@ -1,4 +1,5 @@
 import unittest
+import time
 
 from virtualserial import *
 
@@ -51,6 +52,24 @@ class TestVirtualSerial(unittest.TestCase):
         self.assertEqual(len(vs.channel_queues), 0)
         vs.add_channel(num=0)
         self.assertEqual(len(vs.channel_queues), 1)
+
+    def test_fullChannelQueue(self):
+        vs = VirtualSerial(FakeDevice())
+        ch = vs.open(num=0, maxsize=5)
+        ch.write('foo')
+        ch.write('bar')
+        while not ch.isFull():
+            pass
+        assert ch.isFull()
+        # Verify that reading the full length of the queue included parts of the
+        # second write
+        self.assertEqual(ch.read(5), 'fooba')
+        # Verify that emptying out the queue allowed the last item to be placed
+        self.assertEqual(ch.read(1), 'r')
+        # Verify that the queue is now empty
+        while not ch.isEmpty():
+            pass
+        assert ch.isEmpty()
 
 
 class testChannel(unittest.TestCase):
