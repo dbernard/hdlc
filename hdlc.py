@@ -173,9 +173,15 @@ class Receiver(object):
         }
 
     def _read(self):
+        '''
+        Read incoming bytes from the HDLC device.
+        '''
         return self.device.read(1)
 
     def set_state(self, next_state):
+        '''
+        Set the HDLC state flag to the given state to be processed.
+        '''
         current_state = self.state
 
         if next_state == GET_FRAME:
@@ -185,21 +191,37 @@ class Receiver(object):
         self.state = next_state
 
     def process_out_of_sync(self, c):
+        '''
+        Handle an out of sync HDLC state.
+        '''
         if c == HDLC_FLAG:
             self.state = GET_FRAME
 
     def _write(self, data):
+        '''
+        Write data to the HDLC connected device.
+        '''
         self.device.write(data)
 
     def process_idle(self, c):
-        if c == HDLC_IDLE: 
+        '''
+        Handle an HDLC_IDLE state.
+        '''
+        if c == HDLC_IDLE:
             self.state = IDLE
         elif c == HDLC_FLAG:
             self.state = GET_FRAME
         else:
-            self.statistics['unframed'] += 1 
+            self.statistics['unframed'] += 1
 
     def process_get(self, c):
+        '''
+        Compile incoming bytes into usable data.
+
+        Through this process, drop the HDLC flags off of the beginning and end
+        of the data, as well as the FCS value (after verifying it). If a bad
+        frame is received, replace it with a None object.
+        '''
         if c == HDLC_FLAG:
             if len(self.frame) == 0:
                 self.statistics['empty'] = 1
@@ -221,6 +243,11 @@ class Receiver(object):
             self.frame.append(c)
 
     def process_esc(self, c):
+        '''
+        When an escape character is received, decode or handle it accordingly
+        and reset the state (OUT_OF_SYNC for a double escape, GET_FRAME
+        otherwise).
+        '''
         if c == HDLC_FLAG:
             self.statistics['escaped_flag'] += 1
             self.statistics['invalid'] += 1
@@ -238,9 +265,15 @@ class Receiver(object):
             self.set_state(GET_FRAME)
 
     def process_state(self, c):
+        '''
+        Call the appropriate function based on received data.
+        '''
         self.state_handler[self.state](c)
 
     def verify_frame(self, frame):
+        '''
+        Verify appropriate frame length and FCS value.
+        '''
         if len(frame) < 4:
             self.statistics['invalid'] += 1
             return False
@@ -253,6 +286,14 @@ class Receiver(object):
         return True
 
     def get(self):
+        '''
+        Retrieve data and return a frame from the HDLC.
+
+        Checks for incoming data. Based on received data, process the current
+        state of the HDLC and build data accordingly. If we do not detect any
+        incoming data and timeout, return None. If completed frames are
+        detected, return them (FIFO).
+        '''
         while True:
             c = self._read()
 
@@ -268,6 +309,12 @@ class Receiver(object):
                 return self.completed_frames.popleft()
 
     def send(self, channel, control, data):
+        '''
+        Build and send a data frame through the HDLC.
+
+        Data frames consist of an HDLC_FLAG followed by the channel, the
+        control, the data, the FCS (all escaped), and ending with an HDLC_FLAG.
+        '''
         data = append_fcs32(chr(channel) + chr(control) + data)
 
         coded = []

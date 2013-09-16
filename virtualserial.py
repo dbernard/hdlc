@@ -8,7 +8,12 @@ from collections import deque
 
 class VSQueue(Queue.Queue):
     def extend(self, item, block=True, timeout=None):
-        """Put an item into the queue.
+        '''
+        Put an item into the queue using extend to break the item up. Please
+        note, this implementation does not account for checking the maxsize (if
+        applicable) of a Queue if an item will extend beyond capacity. Perform
+        this check elsewhere. This will, however, protect against the case where
+        a Queue is at its exact capacity.
 
         If optional args 'block' is true and 'timeout' is None (the default),
         block if necessary until a free slot is available. If 'timeout' is
@@ -17,7 +22,7 @@ class VSQueue(Queue.Queue):
         Otherwise ('block' is false), put an item on the queue if a free slot
         is immediately available, else raise the Full exception ('timeout'
         is ignored in that case).
-        """
+        '''
         self.not_full.acquire()
         try:
             if self.maxsize > 0:
@@ -48,7 +53,7 @@ class VSQueue(Queue.Queue):
 
 class Channel(object):
     '''
-    An object representing a virtual serial channel
+    An object representing a virtual serial channel.
     '''
     def __init__(self, vsObj, num, name=None, maxsize=0):
         self.vs = vsObj
@@ -58,25 +63,25 @@ class Channel(object):
 
     def read(self, length, timeout=None):
         '''
-        Read from the channel
+        Read from the channel for (length) bytes.
         '''
         return self.vs.channel_read(self.num, length, timeout=timeout)
 
     def write(self, data):
         '''
-        Write to the channel
+        Write (data) to the channel.
         '''
         self.vs.channel_write(self.num, data)
 
     def isFull(self):
         '''
-        Return True if the channel is full, False if it is not
+        Return True if the channel is full, False if it is not.
         '''
         return self.vs.channel_queues[self.num].full()
 
     def isEmpty(self):
         '''
-        Return True if the channel is empty, False if it is not
+        Return True if the channel is empty, False if it is not.
         '''
         return self.vs.channel_queues[self.num].empty()
 
@@ -89,17 +94,17 @@ class ChannelError(Exception):
         self.msg = msg
 
     def __str__(self):
-        return 'ChannelError: %s' % self.msg
+        return '%s' % self.msg
 
 
 class VirtualSerial(object):
     '''
-    A virtual serial connection handler for communication with the hdlc
+    A virtual serial connection handler for communication with the HDLC.
     '''
     def __init__(self, device):
         '''
-        Start a virtual serial connection with (numChannels) channels 
-        to an HDLC receiver taking to  (device).
+        Start a virtual serial connection with (numChannels) channels
+        to an HDLC receiver connected to (device).
         '''
         self.hdlc = hdlc.Receiver(device)
         self.channel_queues = {}
@@ -107,19 +112,20 @@ class VirtualSerial(object):
 
     def open(self, num, name=None, maxsize=0):
         '''
-        Open and return a Channel object
+        Open and return a Channel object.
         '''
         return Channel(self, num, name=name, maxsize=maxsize)
 
     def add_channel(self, num, maxsize=0):
         '''
-        Add a channel to the channel buffer dict (num is the reference key)
+        Add a channel to the channel queues dict (num is the reference key).
         '''
         self.channel_queues[num] = VSQueue(maxsize=maxsize)
 
     def channel_read(self, chanNo, bytes, timeout=None):
         '''
-        Read from chan_buffer for (bytes) bytes
+        Read from channel_queues for (bytes) bytes. The bytes read are joined
+        and returned as a single piece of data.
         '''
         buffdata = []
         try:
@@ -137,7 +143,7 @@ class VirtualSerial(object):
 
     def channel_write(self, chanNo, data):
         '''
-        Write to a channel on the hdlc
+        Write to a channel on the HDLC.
         '''
         self.hdlc.send(chanNo, 0, data)
         #channel num, control (0 for now), data
@@ -145,8 +151,8 @@ class VirtualSerial(object):
     def _check_for_data(self):
         '''
         Continuously check for incoming data - break it up and add it to the
-        queue. 
-        
+        queue.
+
         If the queues have a size limit and either the queue is full or
         the incoming data will surpass the size limit, add enough data to the
         queue to fill it, then hang on to the rest of the data until it can be
